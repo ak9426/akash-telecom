@@ -1,0 +1,971 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import type {
+  Product,
+  Category,
+  Order,
+  Coupon,
+  Review,
+  WebsiteSettings,
+} from '../src/types/index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_DIR = path.resolve(__dirname, '../data');
+const DB_FILE = path.join(DATA_DIR, 'store.json');
+
+export interface DatabaseSchema {
+  products: Product[];
+  categories: Category[];
+  orders: Order[];
+  coupons: Coupon[];
+  reviews: Review[];
+  settings: WebsiteSettings;
+}
+
+const DEFAULT_CATEGORIES: Category[] = [
+  {
+    id: 'cat_mobile_acc',
+    name: 'Mobile Accessories',
+    slug: 'mobile-accessories',
+    itemCount: 28,
+    description: 'Cases, tempered glass, cables, adapters, and magnetic mounts.',
+    image: '/src/assets/images/category_mobile_accessories_1794308085456.jpg',
+    subcategories: [
+      'Phone Cases',
+      'Screen Protectors',
+      'Charging Cables',
+      'Phone Holders',
+      'Lens Protectors',
+    ],
+  },
+  {
+    id: 'cat_audio',
+    name: 'Audio & Headphones',
+    slug: 'audio-headphones',
+    itemCount: 24,
+    description: 'Active noise-cancelling earbuds, bluetooth neckbands, studio headphones, and portable speakers.',
+    image: '/src/assets/images/category_earbuds_audio_1794308084036.jpg',
+    subcategories: [
+      'Wireless Earbuds',
+      'Bluetooth Headphones',
+      'Neckbands',
+      'Bluetooth Speakers',
+      'Type-C Earphones',
+    ],
+  },
+  {
+    id: 'cat_charging',
+    name: 'Charging & Power',
+    slug: 'charging-power',
+    itemCount: 22,
+    description: 'GaN fast wall chargers, high-capacity power banks, Qi wireless pads, and braided multi-cables.',
+    image: '/src/assets/images/category_fast_chargers_1794308083790.jpg',
+    subcategories: [
+      'GaN Fast Chargers',
+      'Power Banks',
+      'Wireless Chargers',
+      'Car Chargers',
+      'Charging Docks',
+    ],
+  },
+  {
+    id: 'cat_smart_gadgets',
+    name: 'Smart Gadgets',
+    slug: 'smart-gadgets',
+    itemCount: 19,
+    description: 'AMOLED smartwatches, health fitness bands, sensor smart plugs, and mini tech wonders.',
+    image: '/src/assets/images/category_smart_watches_1794308085291.jpg',
+    subcategories: [
+      'Smart Watches',
+      'Fitness Trackers',
+      'Smart Home Plugs',
+      'Anti-Lost Tags',
+    ],
+  },
+  {
+    id: 'cat_computer_acc',
+    name: 'Computer & Tech Accessories',
+    slug: 'computer-tech-accessories',
+    itemCount: 16,
+    description: 'Mechanical keyboards, wireless ergonomics mouse, high-speed USB-C hubs, and aluminum laptop stands.',
+    image: '/src/assets/images/hero_tech_gadgets_showcase_1794308083890.jpg',
+    subcategories: [
+      'USB-C Hubs',
+      'Keyboards',
+      'Ergonomic Mouse',
+      'Laptop Stands',
+      'Cable Organizers',
+    ],
+  },
+  {
+    id: 'cat_gaming',
+    name: 'Gaming Accessories',
+    slug: 'gaming-accessories',
+    itemCount: 14,
+    description: 'Surround-sound low-latency gaming headsets, RGB desk pads, game finger sleeves, and controllers.',
+    image: '/src/assets/images/category_earbuds_audio_1794308084036.jpg',
+    subcategories: [
+      'Gaming Earbuds',
+      'Over-Ear Headsets',
+      'RGB Mousepads',
+      'Mobile Triggers',
+    ],
+  },
+  {
+    id: 'cat_lifestyle',
+    name: 'Lifestyle & Travel Gadgets',
+    slug: 'lifestyle-travel',
+    itemCount: 12,
+    description: 'Rechargeable mini turbo fans, selfie stick tripods, LED video fill lights, and travel adaptors.',
+    image: '/src/assets/images/category_mobile_accessories_1794308085456.jpg',
+    subcategories: [
+      'Rechargeable Mini Fans',
+      'Tripods & Selfie Sticks',
+      'LED Desk & Fill Lights',
+      'Universal Travel Adapters',
+    ],
+  },
+];
+
+const DEFAULT_PRODUCTS: Product[] = [
+  {
+    id: 'akt_prod_01',
+    name: 'Anker 735 GaNPrime 65W 3-Port Fast Wall Charger',
+    slug: 'anker-735-ganprime-65w-fast-charger',
+    categoryId: 'cat_charging',
+    categoryName: 'Charging & Power',
+    brand: 'Anker',
+    regularPrice: 3800,
+    discountedPrice: 3190,
+    discountPercentage: 16,
+    stock: 24,
+    lowStockAlert: 5,
+    isFeatured: true,
+    isTrending: true,
+    isNewArrival: false,
+    isBestSeller: true,
+    rating: 4.9,
+    reviewCount: 38,
+    images: [
+      '/src/assets/images/category_fast_chargers_1794308083790.jpg',
+      '/src/assets/images/hero_tech_gadgets_showcase_1794308083890.jpg',
+    ],
+    description:
+      'High-speed 65W GaNPrime charger powered by GaN 3 technology. Features 2x USB-C and 1x USB-A ports to simultaneously charge your MacBook, iPhone, and Galaxy device with intelligent PowerIQ 4.0 dynamic power distribution.',
+    specifications: {
+      'Total Output': '65W Max',
+      'Ports': '2x USB-C + 1x USB-A',
+      'Technology': 'GaNPrime III + ActiveShield 2.0',
+      'Input Voltage': '100-240V ~ 50/60Hz (Bangladesh Standard)',
+      'Dimensions': '38.2 × 29.1 × 66.1 mm',
+      'Weight': '132g',
+    },
+    colors: ['Phantom Black', 'Titanium Silver'],
+    warranty: '18 Months Anker Official Replacement Warranty',
+    boxContents: [
+      'Anker 735 Charger (GaNPrime 65W)',
+      'Silicon Cable Stabilizer',
+      'Instruction Guide & Official Warranty Card',
+    ],
+    sku: 'ANK-GAN-65W-BLK',
+  },
+  {
+    id: 'akt_prod_02',
+    name: 'Soundcore Space A40 ANC Hi-Res True Wireless Earbuds',
+    slug: 'soundcore-space-a40-anc-tws',
+    categoryId: 'cat_audio',
+    categoryName: 'Audio & Headphones',
+    brand: 'Soundcore',
+    regularPrice: 7500,
+    discountedPrice: 6250,
+    discountPercentage: 17,
+    stock: 18,
+    lowStockAlert: 4,
+    isFeatured: true,
+    isTrending: true,
+    isNewArrival: true,
+    isBestSeller: true,
+    rating: 4.8,
+    reviewCount: 42,
+    images: [
+      '/src/assets/images/category_earbuds_audio_1794308084036.jpg',
+      '/src/assets/images/hero_tech_gadgets_showcase_1794308083890.jpg',
+    ],
+    description:
+      'Upgraded Adaptive Noise Cancelling detects external noise and automatically selects the optimal mode for Dhaka traffic, metro rail, or cafe work. 50 hours playtime, Hi-Res Audio Wireless via LDAC, and lightweight ergonomic fit.',
+    specifications: {
+      'Driver Size': '10mm Double-Layer Diaphragm',
+      'Playtime': '10 Hours (Single Charge) / 50 Hours with Case',
+      'ANC Modes': 'Adaptive Active Noise Cancelling (up to 98% reduction)',
+      'Bluetooth Version': '5.2 with LDAC / AAC / SBC codecs',
+      'Water Resistance': 'IPX4 Splashproof',
+      'Fast Charging': '10 min charge = 4 hours playback',
+    },
+    colors: ['Onyx Black', 'Navy Blue', 'Polar White'],
+    warranty: '12 Months Replacement Warranty',
+    boxContents: [
+      'Soundcore Space A40 Earbuds',
+      'Charging Case',
+      '5 Pairs of Ear Tips (XS/S/M/L/XL)',
+      'USB-C Braided Cable',
+      'Warranty Document',
+    ],
+    sku: 'SND-A40-ANC-BLK',
+  },
+  {
+    id: 'akt_prod_03',
+    name: 'Kieslect Ks Pro 2.01" AMOLED Bluetooth Calling Smartwatch',
+    slug: 'kieslect-ks-pro-amoled-smartwatch',
+    categoryId: 'cat_smart_gadgets',
+    categoryName: 'Smart Gadgets',
+    brand: 'Kieslect',
+    regularPrice: 6500,
+    discountedPrice: 5490,
+    discountPercentage: 15,
+    stock: 15,
+    lowStockAlert: 3,
+    isFeatured: true,
+    isTrending: true,
+    isNewArrival: true,
+    isBestSeller: false,
+    rating: 4.7,
+    reviewCount: 29,
+    images: [
+      '/src/assets/images/category_smart_watches_1794308085291.jpg',
+      '/src/assets/images/hero_tech_gadgets_showcase_1794308083890.jpg',
+    ],
+    description:
+      'Crystal clear 2.01-inch Super AMOLED Display with 410x502 resolution and Always-on Display. Stable Bluetooth 5.2 calling with HD microphone & speaker. Powered by KIES OS with abnormal heart rate alert and 100 sports modes.',
+    specifications: {
+      'Screen': '2.01" Ultra-FHD AMOLED (410*502 px)',
+      'Battery Life': '3-4 Days Heavy Calling / 10 Days Standby',
+      'Calling': 'Clear Bluetooth Calling with Dialpad & Contacts',
+      'Health Tracking': 'Heart Rate, SpO2, Sleep, Stress Monitor',
+      'Waterproof': 'IP68 Swim-Proof',
+      'OS Compatibility': 'Android 5.0+ and iOS 9.0+',
+    },
+    colors: ['Space Gray', 'Dark Silver', 'Midnight Black'],
+    warranty: '1 Year Brand Replacement Warranty',
+    boxContents: [
+      'Kieslect Ks Pro Smartwatch',
+      'Magnetic Silicone Strap + Extra Mesh Band',
+      'Magnetic Charging Cable',
+      'User Manual',
+    ],
+    sku: 'KIE-KSPRO-AMOLED',
+  },
+  {
+    id: 'akt_prod_04',
+    name: 'Baseus Blade 100W 20000mAh Ultra-Thin Laptop Power Bank',
+    slug: 'baseus-blade-100w-20000mah-power-bank',
+    categoryId: 'cat_charging',
+    categoryName: 'Charging & Power',
+    brand: 'Baseus',
+    regularPrice: 6200,
+    discountedPrice: 5150,
+    discountPercentage: 17,
+    stock: 12,
+    lowStockAlert: 3,
+    isFeatured: false,
+    isTrending: true,
+    isNewArrival: false,
+    isBestSeller: true,
+    rating: 4.9,
+    reviewCount: 35,
+    images: [
+      '/src/assets/images/category_fast_chargers_1794308083790.jpg',
+      '/src/assets/images/category_mobile_accessories_1794308085456.jpg',
+    ],
+    description:
+      'Only 18mm slim briefcase-friendly power bank with 100W Power Delivery. Charges laptops, MacBooks, iPad Pro, and flagships at full speed. Intelligent digital screen shows remaining charging time, percentage, and real-time output wattage.',
+    specifications: {
+      'Capacity': '20,000mAh / 74Wh (Flight Approved)',
+      'Type-C 1/2 Output': '5V/3A, 9V/3A, 12V/3A, 15V/3A, 20V/5A (100W Max)',
+      'USB 1/2 Output': '4.5V/5A, 5V/4.5A, 9V/3A, 12V/2.5A (30W Max)',
+      'Fast Recharging': '65W input recharges in only 90 minutes',
+      'Thickness': '18mm Ultra-Slim Profile',
+      'Display': 'Real-time Watts, Volts & Time status LCD',
+    },
+    colors: ['Graphite Black'],
+    warranty: '6 Months Brand Warranty',
+    boxContents: [
+      'Baseus Blade 100W Power Bank',
+      '100W Type-C to Type-C 0.5m Cable',
+      'Velvet Protective Pouch',
+      'Manual',
+    ],
+    sku: 'BAS-BLD-100W',
+  },
+  {
+    id: 'akt_prod_05',
+    name: 'Joyroom JR-T03S Pro Max ANC Wireless Earbuds',
+    slug: 'joyroom-jr-t03s-pro-max-anc-earbuds',
+    categoryId: 'cat_audio',
+    categoryName: 'Audio & Headphones',
+    brand: 'Joyroom',
+    regularPrice: 2800,
+    discountedPrice: 2150,
+    discountPercentage: 23,
+    stock: 35,
+    lowStockAlert: 8,
+    isFeatured: false,
+    isTrending: true,
+    isNewArrival: true,
+    isBestSeller: true,
+    rating: 4.6,
+    reviewCount: 56,
+    images: [
+      '/src/assets/images/category_earbuds_audio_1794308084036.jpg',
+      '/src/assets/images/hero_tech_gadgets_showcase_1794308083890.jpg',
+    ],
+    description:
+      'The most popular budget ANC earbuds in Bangladesh. Features active hybrid noise reduction, wireless charging case, in-ear detection optical sensor, and rich deep bass tuned for modern music lovers.',
+    specifications: {
+      'Bluetooth': 'V5.3 Jerry chip',
+      'ANC Depth': '25dB Hybrid Noise Reduction',
+      'Battery': '30mAh earbud / 360mAh charging case',
+      'Music Time': 'Up to 6 hours continuous',
+      'Charging Mode': 'Qi Wireless + Lightning Port',
+    },
+    colors: ['Glossy White', 'Matte Black'],
+    warranty: '3 Months Replacement Warranty',
+    boxContents: [
+      'Joyroom JR-T03S Pro Max',
+      'Protective Silicone Case',
+      'Lanyard Strap',
+      'Replacement Ear Gels',
+      'Cable',
+    ],
+    sku: 'JOY-T03S-PROMAX',
+  },
+  {
+    id: 'akt_prod_06',
+    name: 'Nillkin Frosted Shield Pro Magnetic Case with MagSafe',
+    slug: 'nillkin-frosted-shield-pro-magsafe-case',
+    categoryId: 'cat_mobile_acc',
+    categoryName: 'Mobile Accessories',
+    brand: 'Nillkin',
+    regularPrice: 1650,
+    discountedPrice: 1250,
+    discountPercentage: 24,
+    stock: 40,
+    lowStockAlert: 10,
+    isFeatured: false,
+    isTrending: false,
+    isNewArrival: true,
+    isBestSeller: true,
+    rating: 4.8,
+    reviewCount: 31,
+    images: [
+      '/src/assets/images/category_mobile_accessories_1794308085456.jpg',
+      '/src/assets/images/hero_tech_gadgets_showcase_1794308083890.jpg',
+    ],
+    description:
+      'Dual-material hybrid protection combining shockproof TPU bumpers with a hard polycarbonate back. Salient dot pattern provides anti-slip grip and resists fingerprints and dust. Powerful built-in N52 neodymium magnets align with MagSafe chargers and wallet accessories.',
+    specifications: {
+      'Materials': 'Imported Environmental PC + Soft TPU',
+      'Magnet Strength': '38pcs N52 Magnets for Solid Lock',
+      'Shock Absorption': 'Reinforced Airbags at 4 corners',
+      'Camera Protection': '1.2mm Raised Bezel Rim',
+      'Compatibility': 'iPhone 15/16 Pro Max, Samsung S24 Ultra',
+    },
+    colors: ['Deep Navy', 'Matte Black', 'Pine Green', 'Cool Silver'],
+    warranty: '100% Original Authentic Product Guaranteed',
+    boxContents: ['Nillkin Frosted Shield Pro Case', 'Authenticity Scratch Code'],
+    sku: 'NIL-FROST-MAG',
+  },
+  {
+    id: 'akt_prod_07',
+    name: 'Remax RT-V01 High-Speed Mini Rechargeable Turbo Fan',
+    slug: 'remax-rt-v01-high-speed-turbo-fan',
+    categoryId: 'cat_lifestyle',
+    categoryName: 'Lifestyle & Travel Gadgets',
+    brand: 'Remax',
+    regularPrice: 1950,
+    discountedPrice: 1450,
+    discountPercentage: 26,
+    stock: 22,
+    lowStockAlert: 6,
+    isFeatured: false,
+    isTrending: true,
+    isNewArrival: true,
+    isBestSeller: false,
+    rating: 4.7,
+    reviewCount: 19,
+    images: [
+      '/src/assets/images/category_mobile_accessories_1794308085456.jpg',
+      '/src/assets/images/hero_tech_gadgets_showcase_1794308083890.jpg',
+    ],
+    description:
+      'Essential summer companion for Bangladesh weather. 100-speed step-less roller adjustment with 130,000 RPM aircraft-grade brushless motor. Provides hurricane-strength airflow in a pocket-sized form factor with digital battery display.',
+    specifications: {
+      'Motor': 'High-torque Brushless Motor (130,000 RPM)',
+      'Battery': '4000mAh Dual-Cell Lithium (Up to 12 Hours)',
+      'Charging': 'Type-C 10W Fast Recharging',
+      'Speed Control': '1 to 100 Infinite Scroll Wheel',
+      'Display': 'LED percentage and wind power indicator',
+      'Weight': '215g',
+    },
+    colors: ['Space Gray', 'Alpine White', 'Sand Pink'],
+    warranty: '6 Months Brand Warranty',
+    boxContents: [
+      'Remax Turbo Fan',
+      'Wrist Lanyard',
+      'Type-C Charging Cord',
+      'User Manual',
+    ],
+    sku: 'RMX-FAN-TURBO',
+  },
+  {
+    id: 'akt_prod_08',
+    name: 'Ugreen 9-in-1 Dual 4K HDMI USB-C Multiport Hub',
+    slug: 'ugreen-9-in-1-usb-c-hub',
+    categoryId: 'cat_computer_acc',
+    categoryName: 'Computer & Tech Accessories',
+    brand: 'Ugreen',
+    regularPrice: 5800,
+    discountedPrice: 4790,
+    discountPercentage: 17,
+    stock: 14,
+    lowStockAlert: 3,
+    isFeatured: true,
+    isTrending: false,
+    isNewArrival: false,
+    isBestSeller: true,
+    rating: 4.9,
+    reviewCount: 22,
+    images: [
+      '/src/assets/images/hero_tech_gadgets_showcase_1794308083890.jpg',
+      '/src/assets/images/category_fast_chargers_1794308083790.jpg',
+    ],
+    description:
+      'Transform one USB-C port into 9 high-productivity ports: Dual 4K@60Hz HDMI, 100W Power Delivery pass-through, Gigabit Ethernet RJ45, 2x USB-A 3.0 (5Gbps), 1x USB-C 3.0 data, and SD/TF card slots. Premium aluminum space-gray finish.',
+    specifications: {
+      'Video Outputs': 'Dual HDMI (4K@60Hz single / dual)',
+      'Power Delivery': '100W USB-C PD 3.0 pass-through',
+      'Network': '1000Mbps Gigabit RJ45 Ethernet',
+      'Data Ports': '2x USB 3.0 + 1x USB-C 3.0 (5Gbps)',
+      'Card Reader': 'SD & MicroSD (104MB/s simultaneous read)',
+      'Enclosure': 'Anodized Heat-Dissipating Aluminum',
+    },
+    colors: ['Space Gray'],
+    warranty: '1 Year Brand Replacement Warranty',
+    boxContents: [
+      'Ugreen 9-in-1 USB-C Hub',
+      'Protective Travel Sleeve',
+      'Quick Start Guide',
+    ],
+    sku: 'UGR-HUB-9IN1',
+  },
+  {
+    id: 'akt_prod_09',
+    name: 'Havit H2002d Ergonomic 3.5mm Pro Gaming Headset',
+    slug: 'havit-h2002d-gaming-headset',
+    categoryId: 'cat_gaming',
+    categoryName: 'Gaming Accessories',
+    brand: 'Havit',
+    regularPrice: 3200,
+    discountedPrice: 2550,
+    discountPercentage: 20,
+    stock: 16,
+    lowStockAlert: 4,
+    isFeatured: false,
+    isTrending: true,
+    isNewArrival: false,
+    isBestSeller: true,
+    rating: 4.8,
+    reviewCount: 27,
+    images: [
+      '/src/assets/images/category_earbuds_audio_1794308084036.jpg',
+      '/src/assets/images/hero_tech_gadgets_showcase_1794308083890.jpg',
+    ],
+    description:
+      'Legendary esports budget favorite in Bangladesh. Features 53mm high magnetic flux neodymium drivers for precise footstep sound positioning in PUBG, Valorant, and Free Fire. Memory foam protein leather earcups and detachable omnidirectional microphone.',
+    specifications: {
+      'Speaker Diameter': 'Φ53mm Neodymium Drivers',
+      'Impedance': '64±15% Ω',
+      'Sensitivity': '110dB ± 3dB',
+      'Microphone': 'Detachable Φ6.0×2.2mm noise-reducing mic',
+      'Cable Length': '1.7m braided + 1-to-2 3.5mm PC splitter adapter',
+      'Frame': 'Steel alloy headband slider',
+    },
+    colors: ['Matte Black', 'Arctic White'],
+    warranty: '1 Year Brand Replacement Warranty',
+    boxContents: [
+      'Havit H2002d Headset',
+      'Detachable Microphone',
+      '3.5mm Y-Splitter Audio/Mic Cable',
+      'Manual',
+    ],
+    sku: 'HVT-H2002D-BLK',
+  },
+];
+
+const DEFAULT_COUPONS: Coupon[] = [
+  {
+    code: 'AKASH10',
+    discountType: 'percentage',
+    discountValue: 10,
+    minSpend: 1500,
+    maxDiscount: 500,
+    active: true,
+    description: '10% Discount on orders over ৳1,500 (Max ৳500)',
+  },
+  {
+    code: 'WELCOME50',
+    discountType: 'fixed',
+    discountValue: 100,
+    minSpend: 1000,
+    active: true,
+    description: '৳100 Flat off for new tech lovers (Min ৳1,000)',
+  },
+  {
+    code: 'FREESHIP',
+    discountType: 'fixed',
+    discountValue: 70,
+    minSpend: 2000,
+    active: true,
+    description: 'Free Dhaka delivery coupon on orders ৳2,000+',
+  },
+];
+
+const DEFAULT_REVIEWS: Review[] = [
+  {
+    id: 'rev_01',
+    productId: 'akt_prod_01',
+    userName: 'Tanvir Hossain',
+    district: 'Dhaka (Dhanmondi)',
+    rating: 5,
+    comment:
+      '100% authentic Anker product! Checked scratch code on official site. It charges my MacBook Air and iPhone 15 together at top speed without heating up. Delivery in 24 hours via Steadfast.',
+    verifiedPurchase: true,
+    date: '2026-10-18',
+  },
+  {
+    id: 'rev_02',
+    productId: 'akt_prod_02',
+    userName: 'Sadia Rahman',
+    district: 'Chittagong (GEC Circle)',
+    rating: 5,
+    comment:
+      'Soundcore Space A40 is incredible. The ANC completely silences traffic noise during daily commute. Akash Telecom verified my bKash payment instantly. Excellent service!',
+    verifiedPurchase: true,
+    date: '2026-10-24',
+  },
+  {
+    id: 'rev_03',
+    productId: 'akt_prod_03',
+    userName: 'Mehedi Hasan',
+    district: 'Sylhet (Zindabazar)',
+    rating: 5,
+    comment:
+      'Ks Pro display is breathtaking! The AMOLED screen is super bright in Sylhet sunlight. Calling quality is crisp. Received within 48 hours via Pathao.',
+    verifiedPurchase: true,
+    date: '2026-11-02',
+  },
+  {
+    id: 'rev_04',
+    productId: 'akt_prod_04',
+    userName: 'Mahmudul Karim',
+    district: 'Dhaka (Uttara)',
+    rating: 5,
+    comment:
+      'Best power bank for remote laptop work. Fits right beside my laptop in the sleeve. 100W genuine output verified with hardware meter.',
+    verifiedPurchase: true,
+    date: '2026-11-05',
+  },
+];
+
+const DEFAULT_ORDERS: Order[] = [
+  {
+    id: 'AKT-2026-8942',
+    customerName: 'Ashraful Islam',
+    phone: '01712345678',
+    email: 'ashraf.bd@gmail.com',
+    division: 'Dhaka',
+    district: 'Dhaka',
+    cityArea: 'Mirpur-10, Block C',
+    address: 'House 14, Road 5, Mirpur-10, Dhaka 1216',
+    notes: 'Please call before arrival.',
+    items: [
+      {
+        productId: 'akt_prod_01',
+        name: 'Anker 735 GaNPrime 65W 3-Port Fast Wall Charger',
+        image: '/src/assets/images/category_fast_chargers_1794308083790.jpg',
+        price: 3190,
+        quantity: 1,
+        color: 'Phantom Black',
+      },
+    ],
+    subtotal: 3190,
+    deliveryMethod: 'inside_dhaka',
+    deliveryCharge: 70,
+    discount: 319,
+    couponCode: 'AKASH10',
+    total: 2941,
+    paymentMethod: 'bkash',
+    paymentStatus: 'verified',
+    transactionId: 'BK9X77L2Q4',
+    senderNumber: '01712345678',
+    orderStatus: 'Shipped',
+    courierService: 'Steadfast',
+    courierTrackingCode: 'STF-994821',
+    createdAt: '2026-11-08T10:14:22.000Z',
+    updatedAt: '2026-11-09T08:30:00.000Z',
+  },
+  {
+    id: 'AKT-2026-8943',
+    customerName: 'Nasrin Sultana',
+    phone: '01865432109',
+    email: 'nasrin.ctg@yahoo.com',
+    division: 'Chittagong',
+    district: 'Chittagong',
+    cityArea: 'Agrabad Commercial Area',
+    address: 'Holding 82, Lane 3, Agrabad, Chittagong',
+    notes: 'Office reception delivery',
+    items: [
+      {
+        productId: 'akt_prod_02',
+        name: 'Soundcore Space A40 ANC Hi-Res True Wireless Earbuds',
+        image: '/src/assets/images/category_earbuds_audio_1794308084036.jpg',
+        price: 6250,
+        quantity: 1,
+        color: 'Onyx Black',
+      },
+    ],
+    subtotal: 6250,
+    deliveryMethod: 'outside_dhaka',
+    deliveryCharge: 130,
+    discount: 500,
+    couponCode: 'AKASH10',
+    total: 5880,
+    paymentMethod: 'cod',
+    paymentStatus: 'pending',
+    orderStatus: 'Processing',
+    courierService: 'Pathao',
+    courierTrackingCode: 'PTH-741209',
+    createdAt: '2026-11-09T14:20:00.000Z',
+    updatedAt: '2026-11-09T14:20:00.000Z',
+  },
+];
+
+const DEFAULT_SETTINGS: WebsiteSettings = {
+  storeName: 'Akash Telecom',
+  tagline: 'Your Tech. Your Lifestyle. Our Commitment.',
+  email: 'khanakash9426@gmail.com',
+  phone: '+8801864015928',
+  whatsapp: '01864015928',
+  announcementText:
+    '⚡ Flash Deal: 10% OFF with code AKASH10 | Fast Delivery across Bangladesh | Cash on Delivery Available',
+  deliveryFeeInsideDhaka: 70,
+  deliveryFeeOutsideDhaka: 130,
+  deliveryFeeExpressDhaka: 150,
+  freeDeliveryThreshold: 2000,
+  bkashMerchantNumber: '01864015928',
+  bkashType: 'bKash Merchant / Personal (Send Money / Payment)',
+  nagadMerchantNumber: '01864015928',
+  rocketMerchantNumber: '01864015928-6',
+  returnPolicyDays: 7,
+  warrantyPolicy: 'Official 6-12 Months Brand Replacement Warranty',
+  courierPartners: ['Steadfast Courier', 'Pathao Courier', 'RedX', 'Sundarban Courier'],
+};
+
+class Database {
+  private data: DatabaseSchema;
+
+  constructor() {
+    this.data = this.loadData();
+  }
+
+  private loadData(): DatabaseSchema {
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+
+      if (fs.existsSync(DB_FILE)) {
+        const raw = fs.readFileSync(DB_FILE, 'utf-8');
+        return JSON.parse(raw);
+      }
+    } catch (err) {
+      console.error('[DB] Failed reading store.json, using defaults:', err);
+    }
+
+    const initialData: DatabaseSchema = {
+      products: DEFAULT_PRODUCTS,
+      categories: DEFAULT_CATEGORIES,
+      orders: DEFAULT_ORDERS,
+      coupons: DEFAULT_COUPONS,
+      reviews: DEFAULT_REVIEWS,
+      settings: DEFAULT_SETTINGS,
+    };
+
+    this.saveData(initialData);
+    return initialData;
+  }
+
+  private saveData(data: DatabaseSchema) {
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+      fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    } catch (err) {
+      console.error('[DB] Failed writing store.json:', err);
+    }
+  }
+
+  public getProducts(): Product[] {
+    return this.data.products;
+  }
+
+  public getProductById(id: string): Product | undefined {
+    return this.data.products.find((p) => p.id === id || p.slug === id);
+  }
+
+  public createProduct(product: Omit<Product, 'id'>): Product {
+    const id = `akt_prod_${Date.now()}`;
+    const newProduct: Product = { ...product, id };
+    this.data.products.unshift(newProduct);
+    this.saveData(this.data);
+    return newProduct;
+  }
+
+  public updateProduct(id: string, updates: Partial<Product>): Product | null {
+    const index = this.data.products.findIndex((p) => p.id === id);
+    if (index === -1) return null;
+    this.data.products[index] = { ...this.data.products[index], ...updates };
+    this.saveData(this.data);
+    return this.data.products[index];
+  }
+
+  public deleteProduct(id: string): boolean {
+    const prevLen = this.data.products.length;
+    this.data.products = this.data.products.filter((p) => p.id !== id);
+    if (this.data.products.length !== prevLen) {
+      this.saveData(this.data);
+      return true;
+    }
+    return false;
+  }
+
+  public getCategories(): Category[] {
+    return this.data.categories;
+  }
+
+  public createCategory(category: Omit<Category, 'id'>): Category {
+    const id = `cat_${Date.now()}`;
+    const newCat = { ...category, id };
+    this.data.categories.push(newCat);
+    this.saveData(this.data);
+    return newCat;
+  }
+
+  public updateCategory(id: string, updates: Partial<Category>): Category | null {
+    const idx = this.data.categories.findIndex((c) => c.id === id);
+    if (idx === -1) return null;
+    this.data.categories[idx] = { ...this.data.categories[idx], ...updates };
+    this.saveData(this.data);
+    return this.data.categories[idx];
+  }
+
+  public deleteCategory(id: string): boolean {
+    const prevLen = this.data.categories.length;
+    this.data.categories = this.data.categories.filter((c) => c.id !== id);
+    if (this.data.categories.length !== prevLen) {
+      this.saveData(this.data);
+      return true;
+    }
+    return false;
+  }
+
+  public getOrders(): Order[] {
+    return this.data.orders;
+  }
+
+  public getOrderById(orderId: string): Order | undefined {
+    return this.data.orders.find(
+      (o) => o.id.toLowerCase() === orderId.trim().toLowerCase()
+    );
+  }
+
+  public getOrdersByPhone(phone: string): Order[] {
+    const cleanPhone = phone.replace(/\s+/g, '').replace(/-/g, '').replace(/^\+88/, '');
+    return this.data.orders.filter((o) => {
+      const oClean = o.phone.replace(/\s+/g, '').replace(/-/g, '').replace(/^\+88/, '');
+      return oClean === cleanPhone || oClean.endsWith(cleanPhone) || cleanPhone.endsWith(oClean);
+    });
+  }
+
+  public createOrder(orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt' | 'orderStatus'>): Order {
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const id = `AKT-2026-${randomSuffix}`;
+    const now = new Date().toISOString();
+
+    const newOrder: Order = {
+      ...orderData,
+      id,
+      orderStatus: 'Pending',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    // Decrement product inventory
+    for (const item of newOrder.items) {
+      const prod = this.data.products.find((p) => p.id === item.productId);
+      if (prod && prod.stock > 0) {
+        prod.stock = Math.max(0, prod.stock - item.quantity);
+      }
+    }
+
+    this.data.orders.unshift(newOrder);
+    this.saveData(this.data);
+    return newOrder;
+  }
+
+  public updateOrderStatus(
+    orderId: string,
+    status: Order['orderStatus'],
+    courierInfo?: { service?: Order['courierService']; tracking?: string }
+  ): Order | null {
+    const order = this.data.orders.find(
+      (o) => o.id.toLowerCase() === orderId.trim().toLowerCase()
+    );
+    if (!order) return null;
+    order.orderStatus = status;
+    order.updatedAt = new Date().toISOString();
+    if (courierInfo?.service) order.courierService = courierInfo.service;
+    if (courierInfo?.tracking) order.courierTrackingCode = courierInfo.tracking;
+    this.saveData(this.data);
+    return order;
+  }
+
+  public updatePaymentStatus(
+    orderId: string,
+    paymentStatus: Order['paymentStatus'],
+    transactionId?: string
+  ): Order | null {
+    const order = this.data.orders.find(
+      (o) => o.id.toLowerCase() === orderId.trim().toLowerCase()
+    );
+    if (!order) return null;
+    order.paymentStatus = paymentStatus;
+    if (transactionId) order.transactionId = transactionId;
+    order.updatedAt = new Date().toISOString();
+    this.saveData(this.data);
+    return order;
+  }
+
+  public getCoupons(): Coupon[] {
+    return this.data.coupons;
+  }
+
+  public validateCoupon(code: string, subtotal: number): { valid: boolean; discount: number; message: string; coupon?: Coupon } {
+    const c = this.data.coupons.find(
+      (item) => item.code.toUpperCase() === code.trim().toUpperCase() && item.active
+    );
+    if (!c) {
+      return { valid: false, discount: 0, message: 'Invalid or expired coupon code' };
+    }
+    if (subtotal < c.minSpend) {
+      return {
+        valid: false,
+        discount: 0,
+        message: `Coupon requires a minimum order of ৳${c.minSpend.toLocaleString()}`,
+      };
+    }
+    let discount = 0;
+    if (c.discountType === 'percentage') {
+      discount = Math.round((subtotal * c.discountValue) / 100);
+      if (c.maxDiscount && discount > c.maxDiscount) {
+        discount = c.maxDiscount;
+      }
+    } else {
+      discount = c.discountValue;
+    }
+    return { valid: true, discount, message: `Applied: ${c.description}`, coupon: c };
+  }
+
+  public addCoupon(coupon: Coupon): Coupon {
+    this.data.coupons.push(coupon);
+    this.saveData(this.data);
+    return coupon;
+  }
+
+  public deleteCoupon(code: string): boolean {
+    const prev = this.data.coupons.length;
+    this.data.coupons = this.data.coupons.filter(
+      (c) => c.code.toUpperCase() !== code.toUpperCase()
+    );
+    if (this.data.coupons.length !== prev) {
+      this.saveData(this.data);
+      return true;
+    }
+    return false;
+  }
+
+  public getReviews(productId?: string): Review[] {
+    if (productId) {
+      return this.data.reviews.filter((r) => r.productId === productId);
+    }
+    return this.data.reviews;
+  }
+
+  public addReview(review: Omit<Review, 'id' | 'date'>): Review {
+    const newRev: Review = {
+      ...review,
+      id: `rev_${Date.now()}`,
+      date: new Date().toISOString().split('T')[0],
+    };
+    this.data.reviews.unshift(newRev);
+
+    // Update product rating and review count
+    const prod = this.data.products.find((p) => p.id === review.productId);
+    if (prod) {
+      const prodRevs = this.data.reviews.filter((r) => r.productId === prod.id);
+      const sum = prodRevs.reduce((acc, r) => acc + r.rating, 0);
+      prod.reviewCount = prodRevs.length;
+      prod.rating = Number((sum / prodRevs.length).toFixed(1));
+    }
+
+    this.saveData(this.data);
+    return newRev;
+  }
+
+  public getSettings(): WebsiteSettings {
+    return this.data.settings;
+  }
+
+  public updateSettings(updates: Partial<WebsiteSettings>): WebsiteSettings {
+    this.data.settings = { ...this.data.settings, ...updates };
+    this.saveData(this.data);
+    return this.data.settings;
+  }
+
+  public getStats() {
+    const orders = this.data.orders;
+    const totalRevenue = orders
+      .filter((o) => o.orderStatus !== 'Cancelled')
+      .reduce((acc, o) => acc + o.total, 0);
+    const totalOrders = orders.length;
+    const pendingOrders = orders.filter((o) => o.orderStatus === 'Pending').length;
+    const deliveredOrders = orders.filter((o) => o.orderStatus === 'Delivered').length;
+    const lowStockCount = this.data.products.filter(
+      (p) => p.stock <= p.lowStockAlert
+    ).length;
+
+    return {
+      totalRevenue,
+      totalOrders,
+      totalProducts: this.data.products.length,
+      pendingOrders,
+      deliveredOrders,
+      lowStockCount,
+      recentOrders: orders.slice(0, 5),
+    };
+  }
+}
+
+export const db = new Database();

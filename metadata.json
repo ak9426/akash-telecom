@@ -1,0 +1,6 @@
+{
+  "name": "Akash Telecom - Premium Mobile Accessories & Tech Gear",
+  "description": "Akash Telecom is Bangladesh's premier tech and mobile accessories retailer offering authentic chargers, earbuds, smartwatches, and gadgets with Cash on Delivery and express delivery.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
